@@ -1,4 +1,4 @@
-name: Build LastWave (iPod mode + hidden downloads)
+name: Build LastWave Classipod
 
 on:
   workflow_dispatch:
@@ -12,6 +12,162 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Unpack mod files
+        run: |
+          cat > payload.b64 <<'PAYLOAD_EOF'
+          H4sIAAAAAAAAA+09a3PbRpL5rF8x4e2tQYeCKErWJqrYXj2oWBW9VqKTu0pSKogYiliBAA4AJTEu
+          /ffr7pkBBsAABGUlt3vlcZVFAN3z6Onp17wOfCdJvCh07bv0qz8o9SHtbG/TX0ilv3/r7wy2vtp8
+          s9Xf3Nnc3n4DcJuD/pv+V6z/R1VIT/MkdWLGvorDsJEAy77/m6bIGd85t5yNw5kNrJA+OPfcdqLI
+          nnv2WPHG2po3i8I4ZU7gxqHnEsDeOPXuvXRR+vZoO/KDDXlGYcLtfSjjA3z2eVwBVjCTcB64TuqF
+          gb0fxi6Pr9I4vONt4G8g+9sYn1tBU+5tIMe+B7S58VtV4pYn6Tzmie3ylI/Tw9i5/UG+egb6yIlW
+          wfadRThP7b04doJbPuNBugLWfvi4GvTPXjo9CIMkjR0vSFep4EHoz2fBCgiX4cMK0FfAzO26ViJM
+          PN8/dR4/cO92ugrJJN6V93sr3ihi/ey56XQFtOmqtQuce++W3uw7cXLhuK4X3K6AH62MkaxGCJC4
+          6Tx5XuUe2lPv94V9Av+twnSAEsP4md3wGFFPvCS9gsq2alwydSJuH3jx2OdX+Ls90iW+4O5BGAcg
+          +BpxZ1Cb2HN82xvDELSP8f+2wMiA3LUvnHnSugCFA+QH8dIwHM14V3dedMYf69m3Hu0i5vdeOF/e
+          ui2iQguwUVNF4nmQejPoQHpuFPsK9MSZB+Mpd4eTCcjspeC3PP3J8efL873jVaVahpnNU6wjcSey
+          6flkJZRTJ1oRowW4GjqtAT9GMAy42zzEFFIClgnWJsO+ki+WYy4jPNg6e753GzRqTgA6DV1v4jU0
+          EGDc2HlA0yFqArrl4Yyn8cI+n0ygdo2gsRNNvXFi78fzpF7y6ZAg8cLGOoKESb3xhHMXbSf7Az0e
+          ycfRokH8ALIXRKgkQtD9PFZ/j/FlE1bkO+kkjGf2STh2fDAf0qbBWEEoVrEJD/MFCRuk9hH893Oz
+          8lTwSboAxkL5QHywAvz5PY8nfoNcBJR54KX2YSNDEIi7HCSpgkw9X9f5GQq+/8njD8C03K9g+R7I
+          rAWoKrsNjMpzHIJ4Hqd7CQ1ZNARPFEwD9r0q4WocGnhrxl3P2cIyZlB91DT5CKu4JSAwHNtHlrBP
+          vWR8xdMUDIikDbyCBcUy4TEPxrwVmntjH4YPgR86oKJHMbDfoRM+D3EI8ih3mMy4wPcLHwS6fXL8
+          4/Dw+ur87Ier69Pzw+Ez0EbHo5O2eBfyxyWHnvbSMG5bTxTDrsKuxUFwEjan88QbL+lkE3BBSdRj
+          IDAqBaL3cvA0XBHhAXge7NCLOLwF56yegYQEg3pLht6L04cwri8A4BPJn3WVcp3bW8iPxrtyxPNB
+          9sE03P/p3DuPILH/CYPWPqY/6tNdmPpegNbR1L44Nr11bhLj69QJBsUPKKfAAYfagweL0tAGIzaG
+          tkCnxaDgl0Jj3x5pUrQOcOyk4+kyoJkTLQNBD4QfBw1gPtl2a2sbG2z95RJmd+jEd6xzoGIrHRY5
+          PvQ832VCgaec3YTuosdufOh8dnJwiD/nnE1BlfmozuyXrlUUe/dAEHbv+Gwfyh6FEXvLyIyw+o9H
+          R4N9+DfsVuD2wzQNZwXQTUxbRdCTsbt/W4DqD/tHm4MqFP+d+0XAN/Bvpwj4gYNAjct1fLP35mBn
+          ywRpqOXgYHC4VSr/gyJvOeeto72t4V4NsIkEBzt7B6XMr8JJiuZCAfC74d723mER8Ocp5/6Jc1Oi
+          w7fDb4ffvemuZbDoLaUC48NweHJ9MDwbDS8Bp29v7UwMYKPjgx+vL/cOj/fOrghsezBhwEfODbA8
+          G2wzl4NE4wkLJ2wCQ5fHLI1BOvksgp/o+a39vShjKDzIMkbOPrC/C0kjCo/nY1Am1hqDhPUQUnGX
+          aaK9Rx91KiRVVb3LDPpbYlZU1y6rqjMB61ZU+S6rqvfeWpftsqxFVpd9yhqg6gYVUmLre90UeQfU
+          NdQ/E++UESYlhayifdRjReFp/wwSn1/Nb5Jx7N1w13pz3e/3uz2mF2p1gTcw043Xr6ntqKwYFcCk
+          ymLplLOdPpsljEgCtiIDm/oO6M+SkCGxEiAPC8KUxTzC2B7bfPPIHGgN9KRrs9cbpV4kAhToUNLX
+          SAupBqkuedtBSLNPzEvLChVI/fRiFNKLtu/RBawWJ+mmGkVk0JuEzvX3BRvnnWpVkb8yi+jlepjP
+          opSCUIVqKhauVtNoblJ1q2yP4Yg9H1g7ry1pV+gVPvNSSy/7Bbuk2qTJPMDxcgwiBPOzeICWj7sL
+          Gib0uROosUfNLxQqlTTUuGa8qTyHIkuVtWrP09pTLlATDmrYZUKoXeCUiCg2vCFZdhnCsNilD5Jk
+          8sNZ+ICMAaUbP3+k8Jfx04l3BwWavihOS4xfVS+bvyqJUPyIJrtqm8ycGCGxkKM8oPZJGNz2iL+A
+          aXwa1dif3TwfjVgiJyTvZfiQy/YCZi9nWJ46nq/evwd2DOa+n38fT/l9HAZZjwMAqA2eA4TBFUe/
+          c5eBeFh/xz6CKwwiGqyz16/X2Gt2BNmtA6dxHjDvInQZxSQmzpiD0HNSBgMU9BqIO9DsoN5QEAZh
+          PIOcwfRmD1OFNgNewfw8hLZZ5wQs9J9h6DMrB+92IPecymC6JWwRzkFL8jvmCCkb89u578SYlahV
+          wizgr3g87TFnPA7nQZrYtt1FHxjlK2TtixpEHvy6iSlrzJV8jjWUvH/XApM4ZDK9ixEI6FLrfrZr
+          UsZvWSEQgKO5qsvYzYLdz3IPpMHPlwx178TU5DNBGMAvh+VgWBbjh9bE8ROuBp83YdbXWYFecaR2
+          Ibd0HgcZZF6ULg72w0dLxeT0SZm8kTpk4QWmLJxX/kCCzsFIkJXFBe0Djkw1DNyuGV5Om4CQcYHo
+          27Yb1QBicNCqhvytN/1uDUY+w2kpk3C4s3kA/4Z1KNnkJXSD1k9vGXWCJtCNbZiGsfd7GKSEsTmA
+          toBo4DGYC/TmO2xcr5BFmeCY0OC1OsjXnR4Yg1BxZdOiekhBaWCcDjtMlJJE4o0I2sG7PIJn74d+
+          ifB5E/JfGteIl9mAuKJxCIMEsr2f9WB8X+hUKREJxQ97Kog8HHMRCMIRyjgLfwnB2FVyDdBIktA3
+          RQ6EsEl3gNjqkHnUyT9ougM/wyOTzxqQ1CAI8DFi+Fv7KHQIfhO/rkCKJ9r3XJMgTPakQeTaBCGy
+          Jw0ik3UIoB7Edy8pFiN0CgIiEWzSB0hEXXjpBK12j0mGFXtLVwK6LBPGHnWvDL3kYo7sYCHjNMu1
+          lZjTzEItB3puiZ/ZaxI/e25bvrRVEV1atOrVKs0QQf8ECGSIqNvjeRzj7IeCHosIvYKWAfsMTCct
+          OBpvM+lfkvpiaup7ZJJ3VjYYlA4QKgjrDs5IUp8LzVZRJj12HKTvLD2DfCii44XVociapZmX0TyZ
+          WpEcr2guEhTIOitSOSEYEgJdPdI4AgZnttk7ttmVOFDB8J7vpVZe0DHI8UfMJquRj0NRDoW8TVbG
+          NwWLVsFrPgVOg8ZAt/gM7BrhJaFlwt5CZ5SCwuyvf8XPNNDK3yn6W5L073efVUqeCdX1vZ1S697n
+          blwpZok9ZIfxEK19yYNPlQGFzFFHoEI1/ZRYQtXwa1MNtfzVAKt2QTb0sIR8HDa1otixSsSBvYwO
+          VwH63XujCqjKao0/ihAFWVxsRQbYIHI1slb71nOxZ0ksw8+nZ3UhJo7mA5SGJnypXylHcAgUdaR/
+          QHTJuiCvc4+VyZR/e2+DYQ3VSlXrClxMfSFjZEWdXDQRBDa2kAYpUB8a2mNpOT9MypmRgwmgbPBk
+          oUI95Z8o48lk6mBSshn+/GPO59xKZTOhSKqt2VQj4VQyB6qQxWFctn00Ho2r9G9mS2Wd3Mw936Uh
+          WWyeFIaoZ4Twx/GHvQ/uC0hQRbeC9UID2NQuNKr0zAs5KPOmJxS2/T9IRRLBdurc8eMJ8SmI4z7x
+          byjsrqqxjylXK79oVtRvQkXkbSG+AAXK4zFI9ROOiqNfpX7eFpFPyRJtaJNulhWpQl+aCZLba0XU
+          i1xQNqHnxlwR/TCXgk3omalXxFavC8hPRZ7KbVa9J5eOw88bgyraB5biKKQReJzymeU1dWfdkDM5
+          F1WDuiBxhRyN/LpGRb5qFf4Skknwts7Ihl6WgRrA8lyBjNkUonKlSuoWu08WmGWsUudqOp9MfA4j
+          Lh/liXiXeeKd86AjpH7nfDLpmLpCkT4Nb29x8RtlgPqjZyy20h+dSx5xBwZ+5YuQW6JiMQGhR1An
+          gUXk2b4cXgz3RmQXXJ+fDclvOQ94py3O3skJ4ez5vhlH6UAiSFVUV5tRIlnFdVYEJJv9MmtnPQlr
+          QlOYle4rNWQwAkeZhZNJHvkyd60IC2XRWRXDyXPtFnmv6NNq4d6KBZGZCxVDUXcOoC6WJsxRhf2G
+          Zmy/K8X2cWD1e8xCvSfM9XUw1ysiXU2PbDBwNec3N1g/jAhOOdMUF1kTzJLzXw6FXAjmAaflGIqW
+          pGtnAbAEszpN9OhXJer1PQZW37+zhMYsGUtldZSbsPP4FC1Xin1JZ8+Gl7TEB76ADjzpMtMXoq4w
+          Pd7r74Fkoqj8Xe4bJlNQCVSgahI6Cip3NV10mggiauv5tYFocpqkRyXqpFxKJ3nP1OaBLtif4FCN
+          nARkNuZrYeilwgc4IU7r36CG9NdW0agfYsf1gHKWlHNy+rqnzU/LEFl15XouiIyRwGJEsfhJi8hl
+          dSuB6CvjLBmsYJXl/fDuqWTcVddHl0s3rvC2ZESu7F0+eOjUsZlceQ4dM8uWvBfgkMVlMA77EvHK
+          gnbmBUDjDB+G2mCbgoNbg34h4Pkk+rwGW1RknW1/S8ji/dZ2Xzxlub8Ws9Rd3cwoOs5jd5dpsSWW
+          RYOzCBHF9kC6lbXyydit6qGZxEZyhW5VjEs3u+xzGOS9E/xA7JyFJNSYqMJ6iRI+Shhkb6rA2OOU
+          6yc1tp6Wx2FJiFB85G1ZRtdpUkSREkoZ+2ZATPVh+J6IIwVpFkaHqpdD6k1ZYxJh5LMwnZKEli5G
+          HlFWayuK4eQ3dlITgMdkjn8buVZPOeEwOFllID0pAU9/qz2pJw+tYqNrwr4xsUyhmFBE6csuUzOW
+          NPIyvKLR14wLg02oCqE0moGVIqO/9aDmnqr2kuwhZE9S+F4iLYc6JvoDeVPxJUvIu3s+Q9Y201z2
+          HV9UPPlyUtEqMkK08EthV0sz/3ogPT3HP8JA0k9e4gFjoD91LHkVjTIQ4VtVU2vVXsZU3EqBefdY
+          ZtEtExDY2HtRQ6hY1my5Zeg4mIT2fd6ABF80txy4SyIAg4HgWcJj5bpQ7A0nImQe9Gx1bRrmrXLA
+          uLKWgYhnt8QnOwz65ntRjzaVxpSTDUzA0PdHIXnPSV3YSk/aqMSS372lBnxmyZLBLKLFumrMN2bj
+          fmkNGyHqv9Z/ybeW1cqXRA6+rIHLKOIhe1o63zPPFKssJxn3w3EOuL94vy3FALeLNBjA92SsjKYg
+          PNT32Oct+67imUEWrRChYFst67D+7P4zCNza6E/VRi6ZnAVTs5DNAc7B04LOqqRNhFbIjO7PtgtP
+          eTBvsAsF0JmY0sviDQGqsBpYtf9Oh4/ku1ocAKPthTqSiApln+pwhcKtEDEjR5MRW1sSySUaULdc
+          ToeQSHufMd97EKv34V3Zw8PUUM0Poe9W21gb+RKoI0+a7q4X1w3rrJlfV5qJc33S6Gmnk5BjA6Wq
+          v8FSizGTYsikNhusUoD1aSEXDPIgaESQs9J2xGPc7VWclbaqO9No05UIPpyG93xlC79dJ+P2fVrJ
+          SN3VyHoqYPLWFC+pyZ37qUM5x07FMVWJJuHncR6SWXVUILtgBl8vd+CwrHkU0ejDHIXRLmJM4jeN
+          I4xk2ad7/3X9097Jx2FtbjlFLCz/GzDVoZkbzBpMwKW/OIbBcuSHDi0sfc12+rgydNKFt5g/vNR4
+          9KQn6tXabq7rzCEtyjJTQNZXTTkWphEsL+3WsFLezGwqtKEqxhhGXZjFGCQ3WxnZkq3NneqiLEz5
+          Ui7teAj0dPIncEycMXf3F5aI4lQzUdG2JlfpJwnjL5ZHJPyxm1tNDxTtsTaBBwoHMlgGu470pVU7
+          V2Nym6SRtio9i0vgdspL4GhRXDO5G2j1IYNamVr6KRJQ3Zx4VWKJ8zBy1KmExajb6rSVMdmG1VxZ
+          TE3F0XYzIotGGtYHZ5GybPWveJ/ZOqX3IgBWXAhM+Qhfvs42ww0dgrCFlaAzY9y3boHm5naVcHok
+          WO1gKgeCJUe9yTlG72UTf9auTG2ISTdW/Ttzl5drf6tx9EpCySghS7xqhpFMudWwYFarZHPwP9sZ
+          1its/erWLZI1j/U/SQYWIlN0rIk1oJGZr91VGxagpGyciCm+fWnkN8VvNRQRqvp1PuhvfddiLe5g
+          2xirqupBytdYATHVbfykRdkNOsCMk6qt+YCUbdOXRDdjmNpoBGxacVyPoUf1aprpPJ7gVlKEMkOE
+          8uwA2SZ1lIA99GEUJ54hXFrtk1ouahXexNXsNRyEZ6rUBwi9GRibP3Hc2idtxkxgdwk1sY9KJ8cI
+          3Vz8hl5afbhQNuCQ4yaiiDas6VtHTCn1grRNp2My8SF6Q7WmFKb2K7MwmaLPSnMrbUxDvrzC397H
+          zb8ludW43UFRy6quC2lU2lokaFetDshDQrn2RdcX5ZJp+XVBNTTOpZpUQaYCdioqQKdLNUAyUSsD
+          cJnKEs2gbe7tlXfvGtQD8WpzlqKfRmBFg/mMEzY9VnnVLe+SqBga2SYNSV6r7G60U1LPUU76yK8K
+          cgzQGYT4KsJ7qQhuL3p1kbtTEbn1ora9iM27Rk4u2WLbWp3/bFZ9OV5VfJhIpzo3kcEGYQAIOb5Z
+          540puhYHgEZlwb7ZNFQlA52aW0YFZta3oC4MzWrUc6vpONOCQtUdcm2SsR+EabPXxrQR24za9MVO
+          0WY27BlF+TmbJYk1S8QGynwzUL4vRU3QAhDbgIHb759UZjBORDFi+xLr/OWTQNpgO/2Tp92/fLLE
+          83/ic1dbMIh1pjiVNeixV/1X3adOk6w3TV/T9LTYL58t/ZYuGE437eKGC+m9YR20ZzlnXHLQaHZY
+          bielFxRAUi/0DTuT2BlLpV4OOlmUSx4oAkrQZy10pEWJJj0GskcwfX9C+TfOzOgsVPFqljvaecjF
+          EAN4rpdQZuvCqTFVObNkcYGBvc0eENk731UVbwYgjku19DNZyWTp6Qdk7G0dbA9A1zGD50k0Mgox
+          hMERibk1aMlyFEMJx6pHKzs964LaeFf93H6DQxPTeUH1bs2f5HBUtZ9KmiAe/HEOB1FIECNbm924
+          7mFbCFxdSyytSLVYFBiOfzOfKaa36cloFH5Nn3CaBPT2eQymdHBXP1NCDSKMZS3ZepGWVL1oWmxF
+          Ah6kX2M1a30Zi2wBIZC7DNXh5sE2U+u2Ozhv3vmLWGYUTthfqDTDcmuVKnSohazs4F3J3VKSNKUj
+          d7Zfwu3Kf9XoACXQy+pebnMW27flw4063UeKm8/fVb5CSEyUaQapi/NtmeN8hGPYRX50NNgZfDs4
+          rEX5XOm/ZZD+dcEwYxUaqUl1LM0ZLAUUpFfGRwN8+7Bjs3NpYOm6IDsmtEiW8awYL1siztNmhoeU
+          6D5PHzivWNCYSLqQKUuWV3eZKBwYA4TCFl/vgLShvKRNty6MQoPV+4xyVgpulFdgoLmzyw6jZXMM
+          uJiiOscg1k+Y3qu1EsZvajmC6aOwROq/4DoD09eRiMSALV75lM1dm/Bo6hk+kBVtRAUfb9c4cULr
+          0miVibbdQT/B1xJ0y3cV+LTcpB4630lH0EjEBmhFYx0DSNuEoSivochVJvVI0jbMMWipxzL4D9nx
+          FIRDKz3qcfCzBi1WGtSDZz2q4Yg1BA04+F2Dxwnw5hLoZBNCKAhjcziP/AZao1aJaEWWdgZ6fTiv
+          RXBNqJf9rf1tPDlKO2BvH/4Nu+VpnRbaamvriBIKnvpamnZuVGRdZSeHWX9BZzsRrfUI6ajnpuV8
+          tPEHYBUkE6dDW+nUk1sFyfcBZ3gALm/+VtgL9LpendEaQSAyLegy5ViLSXvwmpf9uLi86hC6zgnG
+          uPzpe1XU6+LxhLgfUQyYJWv+nJvEcu3HLljE4ueCJBLFCexHtJPB4Sf5ohZ5kfhYkitkA1XrT6ge
+          KKuWwKudaiRoGmBr1hrVOGEBhkIu6ESPf2u+EJ3RquO7QozWkNBAqCYDqd34xP15zngMjepXm1C9
+          pKVu9BZWgtWSorYglYSMb9/+vHC5cokkuHlhYQ57gL3gtwYnwPEUjcQeu17GgdjCl2Y8XE+Kk9tU
+          h2x16YU6nnKdjZurROvjFHYbLJoXn8clrn1nZPwKDy/bhRAzF5f10QHJVMqih1VEMbYu32IT8TX9
+          fWyWPjS+HKhccckcvFp/y6wBraXr5l/a5PU9W69k9s3KmQnjA/JbIsNhUEDmrtMI9YAHRTILgd8V
+          DqltswSdDC2rYe2qXhegmp5/I07zenOtzkDR51V6vWWtv3mRWtd/kaMHp+XnM9OaIkJfKqFzgBbL
+          DtrMP3ZOh2cfSyEq5SvmhyS/xHxidQbMFKoqHwcIvr50FUpeOS2oxq2r/e/0CdGcXtWVFYVFEerK
+          nHLTDWshOuK4lAKgXAFRR6I2TcvXhpQONcyb9rdJV/gAcrHJ85qpXLo2TVWwf1RzhYNViQp+ZpMb
+          V8bQRgnDqhi1YqYVWdAF3mCU18uTRoSwynyeRUVXIk4lxFe/yDHzLssquAra7HASyDOczsFwMNwa
+          FJ3OHfj3bcXpFCU82/EsEwqjWX/q/Y9OFPmLa+AFO1r8UWU03/+5ufOmPyjf/wn/vtz/+WckeQNG
+          sqDj2NKp792sXZ6fj3A/i3gEOZVOrQ4wykYSjzdmjhds4L0iG+NwtqHuMNmAz53u2prLJ4y7XmrF
+          dGwnqF0W8IfuLjE3akfKe4PBZ3oVOzhzFtkxd9zrm0UKjljXdvkYj5rpzNPJ+rcdMTDGsT9Befdr
+          /GtAJzADJn2Qp1TirVsxj3wHDHoB1APgQGLTkdJ0fiWevWxlwToQz7SzaXM3G4dACZs/QgsmneHl
+          5fnlLuOPkdgeyR+dceov2Cab0UnpUItP0JAnDFnjQTGfgif4Fe/+GnyCEn7Z3Rz0f3uSNZDVpEqo
+          embkUXXBRuY1MaF0ZMPirGmR/RB7KZfEI2AeFOgn4WJQB1YnwppzPJA3xoXqa/9BF4mwTTs/B0id
+          Cr36FSNr1PUdPGx8g+5A2jDc2WDfZSZLB/+j813moFGCfHnKsHQGPFMHJ2Hzn4+rUEqnTRuL6a7a
+          mFeq3+h2lI+j0fnZ9dn5z9cXJ3v/fXz2w/XwbG//ZHgIZdyI0rRsfuQLq+M/XIu2XAfhw7U85+Ja
+          LgHvdH8NXv15JRkKOr44PxTnY7XJH0mMaoUXsl2ZqJ2yrq3p7UyIXDkT7i8sqEZi15Omi+cbGTnq
+          jy6rpqgSRxqLqHRAMefn0xYxrtIw5jbmQIcs/rKkUbixU21OeBID68lAyRfLuUi5ZJ5E6JGUro4o
+          XfOg3yBRpXxt1SpkrmkrCE9B8Lm3oc6xzyienV1tonfNbRX7ZnbLbq2oJ/NnZ6gN99Y0xUMe8NAO
+          1eQ9mk8HctDUknasHJH/Vbsq193Y0ZLs4hjxJvmBSUH/AE5BhGtLD9AqwAl1OnEBV8n08jty1t/V
+          D1uVxDGFnjgJ2sBsptTHmYUi8Q6c2LXaYWPCK3Oh1gXnkRaf+9ABveeRYPv/FQm6q/DKqyVlMS/J
+          1naQiLam+aPM9ZhOWUZjmTsxRpftqqLtdHvV8WBK3Xyo/0vWrQXYlt7DIzok4QV6GOWZ8KIbVKop
+          IzzGHvwXEfSQ90KPpnxGZ+iH8dWYfov7rpx4kYGvWMxIRF7qS8DDJ+rLWNrZ6hy6jnZ2Z7tuw5TM
+          b1QGGJ6aecm4ev/Kp/a1oULxCp7y3Tt41xajPS5ib3GnfR3VTu4VayEv8MgOR83qskrRK3Q29OZY
+          nN1vouIKGQFriqwOKBzP3uZXXe3uVvXiCjlnQvxt9nMFTnuWWMls/5WkSabYT2E4qPNBl6lyTHin
+          Jk/u0jBap3uZodfX8V4naYi4MALD2x5Lpk7MaREMv+fxQt7MZDfY/yqZLmsdq1tK7MpFTC1E42dX
+          OffcBzb74LkuKl/IYV2ufutqt46s7Lor1A1xV5x8OnUC5xbDm2GMB40YOgalyT6eIm//NLy8Oj4/
+          s68Of7w+PhvhiWCFD9cHYF9f2f+otRSAQHviilt2itdDk6XO9uauF8JY8Rc4NcajNMGTkVCMusyh
+          b6fHp0OWLiKeGPoV63fHeZSdf34hiEVrw831EJPUBLXv0LFG8inL49CL1cm2NR2v5QHAat8WOHZX
+          8xuMsYnzfLJV6qDjuKWVCWyQw8rFLtpnc5m0DD4vFCNaSYq3HWo1sWd3rhcndfyqVRurhDNqWs0A
+          v8cm8CJwZrwmB7mdaRR7ESBizND2QtTh/HyeRvP0KgUXd2ZphXR7Yn+vXrAh84pD+K/Ifd2XGFJQ
+          k1MvjsOYTqEWpYD+noS+C0ZMEjLbj8fifjs8y4ulIcPfYocEA7bCG/D4y4wF2Z3xHIz0dEyHsTbY
+          +S8xckr5/GmjRxHoM0dQqfrPHEWYtBxEuJfmy+WMYI+B0RCDkZDYH0dH19+2zMe5SUJ/nnIM75sx
+          nrRD08yjsPzqxdiV9NuU+3gm1WQeyAui0MbAHQaIhwVgDEje55iIMUTEXNMmGlYbfmut5iOMcxGO
+          S/YREaSD8glv4s0v9AFJsUBQoksUvUqy+45VzS28FohdRWHqTRYoCMNUIUTzG7CixZXJTBATb+NV
+          9O+QmRvglsp5wMyjuny5Zi5Bi9gNg3SXyVvAIDPByyoLMiOJryUo7lvgCXF3x81vIbFptlGeqPZ1
+          PqLUMEKWerXWXStMhQjCwv81kyDFCRCLJoKSFHSOhbueAK9bnRApToawVXgETGBiy6SbW6yRvHB5
+          Q7v/WJfmYn4Z2JuGEhCB4IA87/WLbTIRw566md+/MmqP6YoWMQ6a+6SmBq9yE3PLxlmq/GI+zcVb
+          cX5IzTZO56nnr7lJeu2STFeDde5tZIZ1R30XUtYSJyokb0d4NSyjml6Hd/TYXRM5go8dLbCZFs7i
+          OfHt/S+bv/WYKgcKyNqA3ZPxATAJcIFe+IYZEG8GGR4ej67Y3sXFyfHwED79X8/gfklf0pf0JX1J
+          X9KX9CV9SV/Sl/QltUv/C/funw8AoAAA
+          PAYLOAD_EOF
+          base64 -d payload.b64 | tar xz || { echo "PASTE WAS CUT OFF - copy the whole file again"; exit 1; }
+          echo "758d47fd61895e2063f567a74f6d1c9430b84b12db25b76f38e8936af2560b2a  Classipod.kt" | sha256sum -c - || { echo "PASTE WAS CUT OFF - copy the whole file again"; exit 1; }
+          echo "561f358ebb457f6328879cc9f7708aa66893090430867a2b8be46fbda57901ef  apply_mod.py" | sha256sum -c - || { echo "PASTE WAS CUT OFF - copy the whole file again"; exit 1; }
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -19,560 +175,8 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Add iPod mode and hidden downloads
-        run: |
-          set -e
-          cat > /tmp/IpodPlayer.kt <<'IPOD_EOF'
-          package com.lastwave.app.ui.player
-
-          import androidx.compose.foundation.BorderStroke
-          import androidx.compose.foundation.background
-          import androidx.compose.foundation.border
-          import androidx.compose.foundation.gestures.detectDragGestures
-          import androidx.compose.foundation.gestures.detectTapGestures
-          import androidx.compose.foundation.layout.Arrangement
-          import androidx.compose.foundation.layout.Box
-          import androidx.compose.foundation.layout.BoxWithConstraints
-          import androidx.compose.foundation.layout.Column
-          import androidx.compose.foundation.layout.Row
-          import androidx.compose.foundation.layout.Spacer
-          import androidx.compose.foundation.layout.fillMaxHeight
-          import androidx.compose.foundation.layout.fillMaxSize
-          import androidx.compose.foundation.layout.fillMaxWidth
-          import androidx.compose.foundation.layout.height
-          import androidx.compose.foundation.layout.navigationBarsPadding
-          import androidx.compose.foundation.layout.padding
-          import androidx.compose.foundation.layout.size
-          import androidx.compose.foundation.layout.statusBarsPadding
-          import androidx.compose.foundation.layout.width
-          import androidx.compose.foundation.shape.CircleShape
-          import androidx.compose.foundation.shape.RoundedCornerShape
-          import androidx.compose.material.icons.Icons
-          import androidx.compose.material.icons.filled.Pause
-          import androidx.compose.material.icons.filled.PlayArrow
-          import androidx.compose.material.icons.filled.SkipNext
-          import androidx.compose.material.icons.filled.SkipPrevious
-          import androidx.compose.material3.Icon
-          import androidx.compose.material3.Text
-          import androidx.compose.runtime.Composable
-          import androidx.compose.runtime.getValue
-          import androidx.compose.runtime.mutableStateOf
-          import androidx.compose.runtime.remember
-          import androidx.compose.runtime.rememberUpdatedState
-          import androidx.compose.runtime.setValue
-          import androidx.compose.ui.Alignment
-          import androidx.compose.ui.Modifier
-          import androidx.compose.ui.draw.clip
-          import androidx.compose.ui.geometry.Offset
-          import androidx.compose.ui.graphics.Brush
-          import androidx.compose.ui.graphics.Color
-          import androidx.compose.ui.input.pointer.pointerInput
-          import androidx.compose.ui.text.font.FontWeight
-          import androidx.compose.ui.text.style.TextAlign
-          import androidx.compose.ui.text.style.TextOverflow
-          import androidx.compose.ui.unit.dp
-          import androidx.compose.ui.unit.sp
-          import androidx.lifecycle.compose.collectAsStateWithLifecycle
-          import com.lastwave.app.playback.MusicPlayer
-          import com.lastwave.app.playback.MusicPlayerState
-          import com.lastwave.app.playback.PlayableTrack
-          import com.lastwave.app.playback.PlaybackProgressState
-          import kotlin.math.PI
-          import kotlin.math.abs
-          import kotlin.math.atan2
-          import kotlinx.coroutines.flow.StateFlow
-
-          private fun ipodTime(ms: Long): String {
-              val total = (ms / 1000L).coerceAtLeast(0L)
-              return "${total / 60L}:${(total % 60L).toString().padStart(2, '0')}"
-          }
-
-          /**
-           * Classic iPod-style Now Playing screen: LCD on top, click wheel below.
-           * MENU (top) closes the player, hold MENU returns to the normal interface,
-           * left/right skip, bottom and centre play/pause, hold centre toggles shuffle,
-           * and dragging a finger around the wheel scrubs through the song.
-           */
-          @Composable
-          internal fun IpodPlayer(
-              state: MusicPlayerState,
-              progressState: StateFlow<PlaybackProgressState>,
-              player: MusicPlayer,
-              onCollapse: () -> Unit,
-              onExitIpodMode: () -> Unit,
-          ) {
-              val track = state.current ?: return
-              val progress by progressState.collectAsStateWithLifecycle()
-              var scrubMs by remember { mutableStateOf<Long?>(null) }
-              val durMs = if (progress.durationMs > 0L) progress.durationMs else (track.durationMs ?: state.durationMs)
-              val shownMs = scrubMs ?: progress.positionMs
-
-              val latestProgress by rememberUpdatedState(progress)
-              val latestDuration by rememberUpdatedState(durMs)
-              val latestCollapse by rememberUpdatedState(onCollapse)
-              val latestExit by rememberUpdatedState(onExitIpodMode)
-              val latestScrub by rememberUpdatedState(scrubMs)
-
-              val bodyBrush = Brush.verticalGradient(listOf(Color(0xFFF1F1F2), Color(0xFFC4C5C8)))
-
-              BoxWithConstraints(
-                  Modifier
-                      .fillMaxSize()
-                      .background(bodyBrush)
-                      .statusBarsPadding()
-                      .navigationBarsPadding(),
-              ) {
-                  val wide = maxWidth > maxHeight
-                  val wheelSize = if (wide) {
-                      minOf(maxHeight - 32.dp, 300.dp)
-                  } else {
-                      minOf(maxWidth - 40.dp, minOf(320.dp, maxHeight * 0.42f))
-                  }
-
-                  val wheel: @Composable () -> Unit = {
-                      ClickWheel(
-                          size = wheelSize,
-                          isPlaying = state.isPlaying,
-                          onMenu = { latestCollapse() },
-                          onMenuHold = { latestExit() },
-                          onNext = { player.next() },
-                          onPrevious = { player.previous() },
-                          onPlayPause = { player.togglePlayPause() },
-                          onShuffle = { player.toggleShuffle() },
-                          onScrubStart = { scrubMs = latestProgress.positionMs },
-                          onScrubDelta = { deltaMs ->
-                              val base = latestScrub ?: latestProgress.positionMs
-                              val upper = if (latestDuration > 0L) latestDuration else Long.MAX_VALUE
-                              scrubMs = (base + deltaMs).coerceIn(0L, upper)
-                          },
-                          onScrubEnd = {
-                              latestScrub?.let { player.seekTo(it) }
-                              scrubMs = null
-                          },
-                      )
-                  }
-
-                  if (wide) {
-                      Row(
-                          Modifier.fillMaxSize().padding(16.dp),
-                          horizontalArrangement = Arrangement.spacedBy(20.dp),
-                          verticalAlignment = Alignment.CenterVertically,
-                      ) {
-                          IpodScreen(
-                              track = track,
-                              isPlaying = state.isPlaying,
-                              shuffle = state.shuffleEnabled,
-                              index = state.currentIndex + 1,
-                              total = state.queue.size,
-                              posMs = shownMs,
-                              durMs = durMs,
-                              modifier = Modifier.weight(1f).fillMaxHeight(0.9f),
-                          )
-                          wheel()
-                      }
-                  } else {
-                      Column(
-                          Modifier.fillMaxSize().padding(horizontal = 20.dp, vertical = 16.dp),
-                          horizontalAlignment = Alignment.CenterHorizontally,
-                          verticalArrangement = Arrangement.SpaceEvenly,
-                      ) {
-                          IpodScreen(
-                              track = track,
-                              isPlaying = state.isPlaying,
-                              shuffle = state.shuffleEnabled,
-                              index = state.currentIndex + 1,
-                              total = state.queue.size,
-                              posMs = shownMs,
-                              durMs = durMs,
-                              modifier = Modifier.fillMaxWidth().height(250.dp),
-                          )
-                          wheel()
-                          Text(
-                              "Hold MENU for normal mode",
-                              color = Color(0xFF6E6E73),
-                              fontSize = 11.sp,
-                          )
-                      }
-                  }
-              }
-          }
-
-          @Composable
-          private fun IpodScreen(
-              track: PlayableTrack,
-              isPlaying: Boolean,
-              shuffle: Boolean,
-              index: Int,
-              total: Int,
-              posMs: Long,
-              durMs: Long,
-              modifier: Modifier,
-          ) {
-              val ink = Color(0xFF1C1C1E)
-              val fraction = if (durMs > 0L) (posMs.toFloat() / durMs.toFloat()).coerceIn(0f, 1f) else 0f
-              Box(
-                  modifier
-                      .clip(RoundedCornerShape(14.dp))
-                      .background(Color(0xFF2B2B2D))
-                      .padding(6.dp),
-              ) {
-                  Column(
-                      Modifier
-                          .fillMaxSize()
-                          .clip(RoundedCornerShape(8.dp))
-                          .background(Brush.verticalGradient(listOf(Color(0xFFFDFEFF), Color(0xFFD9E3EE)))),
-                  ) {
-                      Row(
-                          Modifier
-                              .fillMaxWidth()
-                              .background(Brush.verticalGradient(listOf(Color(0xFFF4F6F9), Color(0xFFB7C2D0))))
-                              .padding(horizontal = 8.dp, vertical = 4.dp),
-                          verticalAlignment = Alignment.CenterVertically,
-                      ) {
-                          Icon(
-                              imageVector = if (isPlaying) Icons.Filled.PlayArrow else Icons.Filled.Pause,
-                              contentDescription = null,
-                              tint = ink,
-                              modifier = Modifier.size(16.dp),
-                          )
-                          Text(
-                              "Now Playing",
-                              modifier = Modifier.weight(1f),
-                              textAlign = TextAlign.Center,
-                              fontWeight = FontWeight.Bold,
-                              fontSize = 14.sp,
-                              color = ink,
-                          )
-                          Text(
-                              text = (if (shuffle) "\u21C4 " else "") + (if (total > 0) "$index of $total" else ""),
-                              fontSize = 11.sp,
-                              color = ink,
-                          )
-                      }
-                      Box(Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF8D99A8)))
-                      Row(
-                          Modifier.fillMaxWidth().weight(1f).padding(12.dp),
-                          verticalAlignment = Alignment.CenterVertically,
-                      ) {
-                          PlayerArtwork(
-                              track = track,
-                              modifier = Modifier
-                                  .size(92.dp)
-                                  .border(BorderStroke(1.dp, Color(0xFF6E7B8B)), RoundedCornerShape(2.dp)),
-                              corner = 2.dp,
-                          )
-                          Spacer(Modifier.width(12.dp))
-                          Column(verticalArrangement = Arrangement.Center) {
-                              Text(
-                                  track.title,
-                                  color = ink,
-                                  fontWeight = FontWeight.Bold,
-                                  fontSize = 15.sp,
-                                  maxLines = 2,
-                                  overflow = TextOverflow.Ellipsis,
-                              )
-                              Text(track.artist, color = ink, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                              val album = track.album
-                              if (!album.isNullOrBlank()) {
-                                  Text(album, color = Color(0xFF3A3A3C), fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                              }
-                          }
-                      }
-                      Column(Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp)) {
-                          Box(
-                              Modifier
-                                  .fillMaxWidth()
-                                  .height(12.dp)
-                                  .clip(RoundedCornerShape(3.dp))
-                                  .background(Color.White)
-                                  .border(BorderStroke(1.dp, Color(0xFF8D99A8)), RoundedCornerShape(3.dp)),
-                          ) {
-                              Box(
-                                  Modifier
-                                      .fillMaxHeight()
-                                      .fillMaxWidth(fraction)
-                                      .background(Brush.verticalGradient(listOf(Color(0xFF5BA3EC), Color(0xFF1B5FB5)))),
-                              )
-                          }
-                          Row(Modifier.fillMaxWidth().padding(top = 3.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                              Text(ipodTime(posMs), color = ink, fontSize = 11.sp)
-                              Text("-" + ipodTime((durMs - posMs).coerceAtLeast(0L)), color = ink, fontSize = 11.sp)
-                          }
-                      }
-                  }
-              }
-          }
-
-          @Composable
-          private fun ClickWheel(
-              size: androidx.compose.ui.unit.Dp,
-              isPlaying: Boolean,
-              onMenu: () -> Unit,
-              onMenuHold: () -> Unit,
-              onNext: () -> Unit,
-              onPrevious: () -> Unit,
-              onPlayPause: () -> Unit,
-              onShuffle: () -> Unit,
-              onScrubStart: () -> Unit,
-              onScrubDelta: (Long) -> Unit,
-              onScrubEnd: () -> Unit,
-          ) {
-              val label = Color(0xFF7B7B80)
-              val centerFraction = 0.36f
-              val lMenu by rememberUpdatedState(onMenu)
-              val lMenuHold by rememberUpdatedState(onMenuHold)
-              val lNext by rememberUpdatedState(onNext)
-              val lPrev by rememberUpdatedState(onPrevious)
-              val lPlay by rememberUpdatedState(onPlayPause)
-              val lShuffle by rememberUpdatedState(onShuffle)
-              val lStart by rememberUpdatedState(onScrubStart)
-              val lDelta by rememberUpdatedState(onScrubDelta)
-              val lEnd by rememberUpdatedState(onScrubEnd)
-
-              Box(
-                  Modifier
-                      .size(size)
-                      .clip(CircleShape)
-                      .background(Brush.verticalGradient(listOf(Color(0xFFFBFBFB), Color(0xFFD3D3D6))))
-                      .border(BorderStroke(1.dp, Color(0x33000000)), CircleShape)
-                      .pointerInput(Unit) {
-                          detectTapGestures(
-                              onTap = { offset ->
-                                  val d = offset - Offset(this.size.width / 2f, this.size.height / 2f)
-                                  val radius = this.size.width / 2f
-                                  when {
-                                      d.getDistance() < radius * centerFraction -> lPlay()
-                                      abs(d.x) > abs(d.y) -> if (d.x > 0f) lNext() else lPrev()
-                                      d.y < 0f -> lMenu()
-                                      else -> lPlay()
-                                  }
-                              },
-                              onLongPress = { offset ->
-                                  val d = offset - Offset(this.size.width / 2f, this.size.height / 2f)
-                                  val radius = this.size.width / 2f
-                                  when {
-                                      d.getDistance() < radius * centerFraction -> lShuffle()
-                                      abs(d.x) <= abs(d.y) && d.y < 0f -> lMenuHold()
-                                      else -> Unit
-                                  }
-                              },
-                          )
-                      }
-                      .pointerInput(Unit) {
-                          detectDragGestures(
-                              onDragStart = { lStart() },
-                              onDragEnd = { lEnd() },
-                              onDragCancel = { lEnd() },
-                              onDrag = { change, _ ->
-                                  val c = Offset(this.size.width / 2f, this.size.height / 2f)
-                                  val prev = change.previousPosition - c
-                                  val cur = change.position - c
-                                  if (cur.getDistance() > this.size.width / 2f * centerFraction) {
-                                      var da = atan2(cur.y, cur.x) - atan2(prev.y, prev.x)
-                                      if (da > PI.toFloat()) da -= (2 * PI).toFloat()
-                                      if (da < -PI.toFloat()) da += (2 * PI).toFloat()
-                                      // One full turn of the wheel = 60 seconds of music.
-                                      lDelta((da / (2f * PI.toFloat()) * 60_000f).toLong())
-                                  }
-                                  change.consume()
-                              },
-                          )
-                      },
-                  contentAlignment = Alignment.Center,
-              ) {
-                  Text(
-                      "MENU",
-                      color = label,
-                      fontWeight = FontWeight.Bold,
-                      fontSize = 13.sp,
-                      modifier = Modifier.align(Alignment.TopCenter).padding(top = size * 0.09f),
-                  )
-                  Icon(
-                      Icons.Filled.SkipNext,
-                      contentDescription = "Next",
-                      tint = label,
-                      modifier = Modifier.align(Alignment.CenterEnd).padding(end = size * 0.07f).size(28.dp),
-                  )
-                  Icon(
-                      Icons.Filled.SkipPrevious,
-                      contentDescription = "Previous",
-                      tint = label,
-                      modifier = Modifier.align(Alignment.CenterStart).padding(start = size * 0.07f).size(28.dp),
-                  )
-                  Icon(
-                      if (isPlaying) Icons.Filled.Pause else Icons.Filled.PlayArrow,
-                      contentDescription = "Play / Pause",
-                      tint = label,
-                      modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = size * 0.07f).size(28.dp),
-                  )
-                  Box(
-                      Modifier
-                          .size(size * centerFraction)
-                          .clip(CircleShape)
-                          .background(Brush.verticalGradient(listOf(Color(0xFFEFEFF1), Color(0xFFB9B9BE))))
-                          .border(BorderStroke(1.dp, Color(0x33000000)), CircleShape),
-                  )
-              }
-          }
-          IPOD_EOF
-          cat > /tmp/apply_mod.py <<'APPLY_EOF'
-          import sys, pathlib
-          ROOT = pathlib.Path("app/src/main/java/com/lastwave/app")
-
-          def edit(rel, old, new):
-              p = ROOT / rel
-              raw = p.read_bytes().decode("utf-8")
-              crlf = "\r\n" in raw
-              text = raw.replace("\r\n", "\n")
-              n = text.count(old)
-              if n != 1:
-                  sys.exit(f"ERROR: expected exactly 1 match in {rel}, found {n} for:\n{old[:120]}")
-              text = text.replace(old, new)
-              if crlf:
-                  text = text.replace("\n", "\r\n")
-              p.write_bytes(text.encode("utf-8"))
-              print("patched", rel)
-
-          # ---- 1. iPod mode setting -------------------------------------------------
-          edit("data/local/SettingsPreferences.kt",
-               "    val buttonNowPlayingEnabled: Boolean = false,\n",
-               "    val buttonNowPlayingEnabled: Boolean = false,\n    val ipodModeEnabled: Boolean = false,\n")
-          edit("data/local/SettingsPreferences.kt",
-               '        val BUTTON_NOW_PLAYING_ENABLED = booleanPreferencesKey("lw_button_now_playing_enabled")\n',
-               '        val BUTTON_NOW_PLAYING_ENABLED = booleanPreferencesKey("lw_button_now_playing_enabled")\n'
-               '        val IPOD_MODE_ENABLED = booleanPreferencesKey("lw_ipod_mode_enabled")\n')
-          edit("data/local/SettingsPreferences.kt",
-               "                buttonNowPlayingEnabled = p.readSafely(Keys.BUTTON_NOW_PLAYING_ENABLED) ?: false,\n",
-               "                buttonNowPlayingEnabled = p.readSafely(Keys.BUTTON_NOW_PLAYING_ENABLED) ?: false,\n"
-               "                ipodModeEnabled = p.readSafely(Keys.IPOD_MODE_ENABLED) ?: false,\n")
-          edit("data/local/SettingsPreferences.kt",
-               "        dataStore.edit { it[Keys.BUTTON_NOW_PLAYING_ENABLED] = enabled }\n    }\n",
-               "        dataStore.edit { it[Keys.BUTTON_NOW_PLAYING_ENABLED] = enabled }\n    }\n\n"
-               "    suspend fun setIpodModeEnabled(enabled: Boolean) {\n"
-               "        dataStore.edit { it[Keys.IPOD_MODE_ENABLED] = enabled }\n    }\n")
-
-          edit("ui/settings/SettingsViewModel.kt",
-               "        settingsPreferences.setButtonNowPlayingEnabled(enabled)\n    }\n",
-               "        settingsPreferences.setButtonNowPlayingEnabled(enabled)\n    }\n"
-               '    fun setIpodModeEnabled(enabled: Boolean) = launchSettingsAction("update iPod mode") {\n'
-               "        settingsPreferences.setIpodModeEnabled(enabled)\n    }\n")
-
-          edit("ui/settings/SettingsScreen.kt",
-               "                    SettingsGroup(rowCount = 3) { index, position ->\n"
-               "                        when (index) {\n"
-               "                            0 -> SettingsActionCard(\n"
-               "                                icon = Icons.Filled.Translate,",
-               "                    SettingsGroup(rowCount = 4) { index, position ->\n"
-               "                        when (index) {\n"
-               "                            0 -> SettingsActionCard(\n"
-               "                                icon = Icons.Filled.Translate,")
-          edit("ui/settings/SettingsScreen.kt",
-               '                                isHighlighted = (highlightedSettingId == "appearance.button_now_playing"),\n'
-               "                            )\n",
-               '                                isHighlighted = (highlightedSettingId == "appearance.button_now_playing"),\n'
-               "                            )\n"
-               "                            3 -> SettingsToggleCard(\n"
-               "                                icon = Icons.Filled.PlayCircle,\n"
-               "                                iconContainer = MaterialTheme.colorScheme.secondaryContainer,\n"
-               "                                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,\n"
-               '                                title = "iPod mode",\n'
-               "                                subtitle = if (misc.ipodModeEnabled) {\n"
-               '                                    "Classic iPod player with click wheel"\n'
-               "                                } else {\n"
-               '                                    "Normal LastWave player"\n'
-               "                                },\n"
-               "                                checked = misc.ipodModeEnabled,\n"
-               "                                onCheckedChange = viewModel::setIpodModeEnabled,\n"
-               "                                position = position,\n"
-               '                                isHighlighted = (highlightedSettingId == "appearance.ipod_mode"),\n'
-               "                            )\n")
-
-          edit("ui/player/PlayerViewModel.kt",
-               "    fun setLyricsStyle(style: LyricsStyle) {\n"
-               "        viewModelScope.launch {\n"
-               "            settingsPreferences.setLyricsStyle(style)\n"
-               "        }\n"
-               "    }\n",
-               "    fun setLyricsStyle(style: LyricsStyle) {\n"
-               "        viewModelScope.launch {\n"
-               "            settingsPreferences.setLyricsStyle(style)\n"
-               "        }\n"
-               "    }\n\n"
-               "    fun setIpodMode(enabled: Boolean) {\n"
-               "        viewModelScope.launch {\n"
-               "            settingsPreferences.setIpodModeEnabled(enabled)\n"
-               "        }\n"
-               "    }\n")
-
-          edit("ui/player/PlayerHost.kt",
-               "    FullPlayer(\n        state = state,\n        progressState = viewModel.progressState,\n        player = viewModel.player,\n        lyricsState = lyricsState,\n",
-               "    if (settings.ipodModeEnabled && currentTrack != null) {\n"
-               "        IpodPlayer(\n"
-               "            state = state,\n"
-               "            progressState = viewModel.progressState,\n"
-               "            player = viewModel.player,\n"
-               "            onCollapse = onCollapse,\n"
-               "            onExitIpodMode = { viewModel.setIpodMode(false) },\n"
-               "        )\n"
-               "        return\n"
-               "    }\n"
-               "    FullPlayer(\n        state = state,\n        progressState = viewModel.progressState,\n        player = viewModel.player,\n        lyricsState = lyricsState,\n")
-
-          # ---- 2. Hidden (app-private) downloads -------------------------------------
-          edit("data/download/TrackDownloadManagerStorage.kt",
-               "        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {\n"
-               "            // Android MediaStore Audio only accepts standard audio MIME types\n",
-               "        if (keepDownloadsPrivate()) {\n"
-               "            val privateBase = privateDownloadsDir(context)\n"
-               "            val privateDir = if (safeSubpath.isNotBlank()) File(privateBase, safeSubpath) else privateBase\n"
-               "            if (!privateDir.exists()) privateDir.mkdirs()\n"
-               "            val privateFile = File(privateDir, filename)\n"
-               "            return Triple(java.io.FileOutputStream(privateFile), null, privateFile)\n"
-               "        }\n\n"
-               "        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {\n"
-               "            // Android MediaStore Audio only accepts standard audio MIME types\n")
-          edit("data/download/TrackDownloadManagerStorage.kt",
-               "        // Mirror the audio subfolder so .lrc sits next to its track. Note the\n",
-               "        if (keepDownloadsPrivate()) {\n"
-               "            return runCatching {\n"
-               "                val privateBase = privateDownloadsDir(context)\n"
-               "                val privateDir = if (safeSubpath.isNotBlank()) File(privateBase, safeSubpath) else privateBase\n"
-               "                if (!privateDir.exists()) privateDir.mkdirs()\n"
-               "                val privateFile = File(privateDir, filename)\n"
-               "                privateFile.writeText(content, Charsets.UTF_8)\n"
-               "                privateFile.absolutePath\n"
-               "            }.getOrNull()\n"
-               "        }\n"
-               "        // Mirror the audio subfolder so .lrc sits next to its track. Note the\n")
-
-          # helper functions appended to the end of the storage file
-          p = ROOT / "data/download/TrackDownloadManagerStorage.kt"
-          raw = p.read_bytes().decode("utf-8")
-          crlf = "\r\n" in raw
-          add = (
-              "\n\n/** Downloads stay in the app's private storage (like Spotify), not in the public Music folder. */\n"
-              "internal fun keepDownloadsPrivate(): Boolean = true\n\n"
-              "internal fun privateDownloadsDir(context: Context): File =\n"
-              '    File(context.filesDir, "downloads").apply { if (!exists()) mkdirs() }\n'
-          )
-          if crlf:
-              add = add.replace("\n", "\r\n")
-          p.write_bytes((raw.rstrip() + add).encode("utf-8"))
-          print("patched data/download/TrackDownloadManagerStorage.kt (helpers)")
-
-          edit("playback/MusicPlayer.kt",
-               "listOfNotNull(appMusicDir?.takeIf { it.exists() })",
-               'listOfNotNull(appMusicDir?.takeIf { it.exists() }, java.io.File(appContext.filesDir, "downloads").takeIf { it.exists() })')
-
-          # ---- 3. new iPod screen -----------------------------------------------------
-          import shutil
-          src = pathlib.Path(__file__).with_name("IpodPlayer.kt") if "__file__" in globals() else None
-          dst = ROOT / "ui/player/IpodPlayer.kt"
-          shutil.copyfile(sys.argv[1] if len(sys.argv) > 1 else src, dst)
-          print("added ui/player/IpodPlayer.kt")
-          print("ALL EDITS APPLIED")
-          APPLY_EOF
-          python3 /tmp/apply_mod.py /tmp/IpodPlayer.kt
+      - name: Add Classipod interface and hidden downloads
+        run: python3 apply_mod.py Classipod.kt
 
       - name: Restore signing key
         id: keycache
@@ -603,6 +207,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: LastWave-iPod-APK
+          name: LastWave-Classipod-APK
           path: app/build/outputs/apk/release/*.apk
           if-no-files-found: error
+          
