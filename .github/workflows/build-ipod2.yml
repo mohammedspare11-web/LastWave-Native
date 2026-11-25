@@ -1,4 +1,4 @@
-name: Build LastWave (iPod mode + hidden downloads)
+name: Build LastWave Classipod
 
 on:
   workflow_dispatch:
@@ -12,6 +12,10 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Check mod files are present
+        run: |
+          ls -la Classipod.kt apply_mod.py
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -19,380 +23,648 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Add iPod mode and hidden downloads
+      - name: Add Classipod interface and hidden downloads
+        run: python3 apply_mod.py Classipod.kt
+
+      - name: Restore signing key
+        id: keycache
+        uses: actions/cache@v4
+        with:
+          path: lw-signing.p12
+          key: lastwave-ipod-signing-key-v1
+
+      - name: Create signing key (first run only)
+        if: steps.keycache.outputs.cache-hit != 'true'
         run: |
-          set -e
-          cat > /tmp/Classipod.kt <<'IPOD_EOF'
+          keytool -genkeypair -keystore lw-signing.p12 -storetype PKCS12 \
+            -storepass lastwaveipod -keypass lastwaveipod -alias release_key \
+            -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=LastWave iPod build"
+
+      - name: Prepare signing settings
+        run: |
+          echo "SIGNING_KEY=$(base64 -w0 lw-signing.p12)" >> "$GITHUB_ENV"
+          echo "RELEASE_STORE_PASSWORD=lastwaveipod" >> "$GITHUB_ENV"
+          echo "RELEASE_KEY_ALIAS=release_key" >> "$GITHUB_ENV"
+          echo "RELEASE_KEY_PASSWORD=lastwaveipod" >> "$GITHUB_ENV"
+
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: LastWave-Classipod-APK
+          path: app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
           package com.lastwave.app.ui.classipod
 
-          import android.app.Activity
-          import androidx.activity.compose.BackHandler
-          import androidx.compose.foundation.BorderStroke
-          import androidx.compose.foundation.background
-          import androidx.compose.foundation.border
-          import androidx.compose.foundation.clickable
-          import androidx.compose.foundation.gestures.detectDragGestures
-          import androidx.compose.foundation.gestures.detectTapGestures
-          import androidx.compose.foundation.layout.Arrangement
-          import androidx.compose.foundation.layout.Box
-          import androidx.compose.foundation.layout.BoxWithConstraints
-          import androidx.compose.foundation.layout.Column
-          import androidx.compose.foundation.layout.Row
-          import androidx.compose.foundation.layout.Spacer
-          import androidx.compose.foundation.layout.fillMaxHeight
-          import androidx.compose.foundation.layout.fillMaxSize
-          import androidx.compose.foundation.layout.fillMaxWidth
-          import androidx.compose.foundation.layout.height
-          import androidx.compose.foundation.layout.navigationBarsPadding
-          import androidx.compose.foundation.layout.padding
-          import androidx.compose.foundation.layout.size
-          import androidx.compose.foundation.layout.statusBarsPadding
-          import androidx.compose.foundation.layout.width
-          import androidx.compose.foundation.lazy.LazyColumn
-          import androidx.compose.foundation.lazy.rememberLazyListState
-          import androidx.compose.foundation.shape.CircleShape
-          import androidx.compose.foundation.shape.RoundedCornerShape
-          import androidx.compose.material.icons.Icons
-          import androidx.compose.material.icons.filled.Pause
-          import androidx.compose.material.icons.filled.PlayArrow
-          import androidx.compose.material.icons.filled.SkipNext
-          import androidx.compose.material.icons.filled.SkipPrevious
-          import androidx.compose.material3.Icon
-          import androidx.compose.material3.Text
-          import androidx.compose.runtime.Composable
-          import androidx.compose.runtime.LaunchedEffect
-          import androidx.compose.runtime.getValue
-          import androidx.compose.runtime.key
-          import androidx.compose.runtime.mutableStateListOf
-          import androidx.compose.runtime.mutableStateMapOf
-          import androidx.compose.runtime.mutableStateOf
-          import androidx.compose.runtime.remember
-          import androidx.compose.runtime.rememberUpdatedState
-          import androidx.compose.runtime.saveable.rememberSaveable
-          import androidx.compose.runtime.setValue
-          import androidx.compose.ui.Alignment
-          import androidx.compose.ui.Modifier
-          import androidx.compose.ui.draw.clip
-          import androidx.compose.ui.geometry.Offset
-          import androidx.compose.ui.graphics.Brush
-          import androidx.compose.ui.graphics.Color
-          import androidx.compose.ui.hapticfeedback.HapticFeedbackType
-          import androidx.compose.ui.input.pointer.pointerInput
-          import androidx.compose.ui.platform.LocalContext
-          import androidx.compose.ui.platform.LocalHapticFeedback
-          import androidx.compose.ui.text.font.FontWeight
-          import androidx.compose.ui.text.style.TextAlign
-          import androidx.compose.ui.text.style.TextOverflow
-          import androidx.compose.ui.unit.Dp
-          import androidx.compose.ui.unit.dp
-          import androidx.compose.ui.unit.sp
-          import androidx.hilt.navigation.compose.hiltViewModel
-          import androidx.lifecycle.ViewModel
-          import androidx.lifecycle.compose.collectAsStateWithLifecycle
-          import androidx.lifecycle.viewModelScope
-          import androidx.media3.common.Player
-          import com.lastwave.app.data.local.MiscSettings
-          import com.lastwave.app.data.local.SettingsPreferences
-          import com.lastwave.app.data.local.db.DownloadedTrackDao
-          import com.lastwave.app.data.local.db.DownloadedTrackEntity
-          import com.lastwave.app.data.playlist.LIKED_SONGS_MODE
-          import com.lastwave.app.data.playlist.LIKED_SONGS_TITLE
-          import com.lastwave.app.data.playlist.PlaylistRepository
-          import com.lastwave.app.data.playlist.SavedPlaylist
-          import com.lastwave.app.playback.MusicPlayer
-          import com.lastwave.app.playback.MusicPlayerState
-          import com.lastwave.app.playback.PlayableTrack
-          import com.lastwave.app.playback.toPlayableTrack
-          import com.lastwave.app.playback.withoutProgress
-          import com.lastwave.app.ui.player.PlayerArtwork
-          import com.lastwave.app.ui.settings.toPlayableTrack
-          import dagger.hilt.android.lifecycle.HiltViewModel
-          import javax.inject.Inject
-          import kotlin.math.PI
-          import kotlin.math.abs
-          import kotlin.math.atan2
-          import kotlinx.coroutines.flow.SharingStarted
-          import kotlinx.coroutines.flow.StateFlow
-          import kotlinx.coroutines.flow.catch
-          import kotlinx.coroutines.flow.map
-          import kotlinx.coroutines.flow.stateIn
-          import kotlinx.coroutines.launch
+import android.app.Activity
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.SkipPrevious
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.media3.common.Player
+import com.lastwave.app.data.local.MiscSettings
+import com.lastwave.app.data.local.SettingsPreferences
+import com.lastwave.app.data.local.db.DownloadedTrackDao
+import com.lastwave.app.data.local.db.DownloadedTrackEntity
+import com.lastwave.app.data.playlist.LIKED_SONGS_MODE
+import com.lastwave.app.data.playlist.LIKED_SONGS_TITLE
+import com.lastwave.app.data.playlist.PlaylistRepository
+import com.lastwave.app.data.playlist.SavedPlaylist
+import com.lastwave.app.playback.MusicPlayer
+import com.lastwave.app.playback.MusicPlayerState
+import com.lastwave.app.playback.PlayableTrack
+import com.lastwave.app.playback.toPlayableTrack
+import com.lastwave.app.playback.withoutProgress
+import com.lastwave.app.ui.player.PlayerArtwork
+import com.lastwave.app.ui.settings.toPlayableTrack
+import dagger.hilt.android.lifecycle.HiltViewModel
+import javax.inject.Inject
+import kotlin.math.PI
+import kotlin.math.abs
+import kotlin.math.atan2
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-          // ---------------------------------------------------------------------------
-          // Dark "Classipod" palette: graphite body, black LCD, blue highlight.
-          // ---------------------------------------------------------------------------
-          private val BodyTop = Color(0xFF2B2B2E)
-          private val BodyBottom = Color(0xFF111113)
-          private val LcdBg = Color(0xFF0E0F12)
-          private val LcdBezel = Color(0xFF050506)
-          private val HeaderTop = Color(0xFF5A5C63)
-          private val HeaderBottom = Color(0xFF2C2D32)
-          private val HighlightTop = Color(0xFF3FA3EA)
-          private val HighlightBottom = Color(0xFF1C6AC2)
-          private val SoftText = Color(0xFF9EA4AD)
-          private val WheelLabel = Color(0xFF8E8E95)
+// ---------------------------------------------------------------------------
+// Dark "Classipod" palette: graphite body, black LCD, blue highlight.
+// ---------------------------------------------------------------------------
+private val BodyTop = Color(0xFF2B2B2E)
+private val BodyBottom = Color(0xFF111113)
+private val LcdBg = Color(0xFF0E0F12)
+private val LcdBezel = Color(0xFF050506)
+private val HeaderTop = Color(0xFF5A5C63)
+private val HeaderBottom = Color(0xFF2C2D32)
+private val HighlightTop = Color(0xFF3FA3EA)
+private val HighlightBottom = Color(0xFF1C6AC2)
+private val SoftText = Color(0xFF9EA4AD)
+private val WheelLabel = Color(0xFF8E8E95)
 
-          private const val WHEEL_CENTER = 0.36f
-          private const val TICK_RADIANS = 0.42f // about 24 degrees of finger travel per row
+private const val WHEEL_CENTER = 0.36f
+private const val TICK_RADIANS = 0.42f // about 24 degrees of finger travel per row
 
-          @HiltViewModel
-          class ClassipodViewModel @Inject constructor(
-              val player: MusicPlayer,
-              private val settingsPreferences: SettingsPreferences,
-              playlistRepository: PlaylistRepository,
-              downloadedTrackDao: DownloadedTrackDao,
-          ) : ViewModel() {
-              val settings: StateFlow<MiscSettings> = settingsPreferences.settings
-                  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MiscSettings())
+@HiltViewModel
+class ClassipodViewModel @Inject constructor(
+    val player: MusicPlayer,
+    private val settingsPreferences: SettingsPreferences,
+    playlistRepository: PlaylistRepository,
+    downloadedTrackDao: DownloadedTrackDao,
+) : ViewModel() {
+    val settings: StateFlow<MiscSettings> = settingsPreferences.settings
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), MiscSettings())
 
-              /** Playback state without the 60 ms position ticker, so lists do not repaint 15x a second. */
-              val playerState: StateFlow<MusicPlayerState> = player.state
-                  .map { it.withoutProgress() }
-                  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), player.state.value.withoutProgress())
+    /** Playback state without the 60 ms position ticker, so lists do not repaint 15x a second. */
+    val playerState: StateFlow<MusicPlayerState> = player.state
+        .map { it.withoutProgress() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), player.state.value.withoutProgress())
 
-              val playlists: StateFlow<List<SavedPlaylist>> = playlistRepository.playlists
-                  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val playlists: StateFlow<List<SavedPlaylist>> = playlistRepository.playlists
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-              val downloads: StateFlow<List<DownloadedTrackEntity>> = downloadedTrackDao.getAll()
-                  .catch { emit(emptyList()) }
-                  .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val downloads: StateFlow<List<DownloadedTrackEntity>> = downloadedTrackDao.getAll()
+        .catch { emit(emptyList()) }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-              fun setIpodMode(enabled: Boolean) {
-                  viewModelScope.launch { settingsPreferences.setIpodModeEnabled(enabled) }
-              }
-          }
+    fun setIpodMode(enabled: Boolean) {
+        viewModelScope.launch { settingsPreferences.setIpodModeEnabled(enabled) }
+    }
+}
 
-          private sealed class Page {
-              object Root : Page()
-              object NowPlaying : Page()
-              object UpNext : Page()
-              object Liked : Page()
-              object Playlists : Page()
-              object Downloads : Page()
-              object Settings : Page()
-              data class PlaylistTracks(val id: Long, val title: String) : Page()
-          }
+private sealed class Page {
+    object Root : Page()
+    object NowPlaying : Page()
+    object UpNext : Page()
+    object Liked : Page()
+    object Playlists : Page()
+    object Downloads : Page()
+    object Settings : Page()
+    data class PlaylistTracks(val id: Long, val title: String) : Page()
+}
 
-          private class IpodRow(
-              val title: String,
-              val detail: String? = null,
-              val chevron: Boolean = true,
-              val onSelect: () -> Unit,
-          )
+private class IpodRow(
+    val title: String,
+    val detail: String? = null,
+    val chevron: Boolean = true,
+    val onSelect: () -> Unit,
+)
 
-          /**
-           * Full-screen iPod interface that sits on top of the normal app when iPod mode
-           * is on. "LastWave (normal app)" in Settings lets you peek at the regular
-           * screens (search, accounts...) and a small iPod pill brings you back.
-           */
-          @Composable
-          fun ClassipodOverlay(vm: ClassipodViewModel = hiltViewModel()) {
-              val settings by vm.settings.collectAsStateWithLifecycle()
-              var peekNormal by rememberSaveable { mutableStateOf(false) }
-              if (!settings.ipodModeEnabled) return
-              if (peekNormal) {
-                  Box(Modifier.fillMaxSize()) {
-                      Box(
-                          Modifier
-                              .align(Alignment.CenterEnd)
-                              .padding(end = 4.dp)
-                              .clip(RoundedCornerShape(50))
-                              .background(Color(0xE61C1C1E))
-                              .clickable { peekNormal = false }
-                              .padding(horizontal = 12.dp, vertical = 9.dp),
-                      ) {
-                          Text("iPod", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                      }
-                  }
-                  return
-              }
-              ClassipodScreen(vm = vm, onPeekNormal = { peekNormal = true })
-          }
+/**
+ * Full-screen iPod interface that sits on top of the normal app when iPod mode
+ * is on. "LastWave (normal app)" in Settings lets you peek at the regular
+ * screens (search, accounts...) and a small iPod pill brings you back.
+ */
+@Composable
+fun ClassipodOverlay(vm: ClassipodViewModel = hiltViewModel()) {
+    val settings by vm.settings.collectAsStateWithLifecycle()
+    var peekNormal by rememberSaveable { mutableStateOf(false) }
+    if (!settings.ipodModeEnabled) return
+    if (peekNormal) {
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 4.dp)
+                    .clip(RoundedCornerShape(50))
+                    .background(Color(0xE61C1C1E))
+                    .clickable { peekNormal = false }
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+            ) {
+                Text("iPod", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            }
+        }
+        return
+    }
+    ClassipodScreen(vm = vm, onPeekNormal = { peekNormal = true })
+}
 
-          private fun pageTitle(page: Page): String = when (page) {
-              Page.Root -> "Music"
-              Page.NowPlaying -> "Now Playing"
-              Page.UpNext -> "Up Next"
-              Page.Liked -> "Liked Songs"
-              Page.Playlists -> "Playlists"
-              Page.Downloads -> "Downloads"
-              Page.Settings -> "Settings"
-              is Page.PlaylistTracks -> page.title
-          }
+private fun pageTitle(page: Page): String = when (page) {
+    Page.Root -> "Music"
+    Page.NowPlaying -> "Now Playing"
+    Page.UpNext -> "Up Next"
+    Page.Liked -> "Liked Songs"
+    Page.Playlists -> "Playlists"
+    Page.Downloads -> "Downloads"
+    Page.Settings -> "Settings"
+    is Page.PlaylistTracks -> page.title
+}
 
-          @Composable
-          private fun ClassipodScreen(vm: ClassipodViewModel, onPeekNormal: () -> Unit) {
-              val player = vm.player
-              val state by vm.playerState.collectAsStateWithLifecycle()
-              val playlists by vm.playlists.collectAsStateWithLifecycle()
-              val downloads by vm.downloads.collectAsStateWithLifecycle()
-              val progress by player.progressState.collectAsStateWithLifecycle()
-              val haptics = LocalHapticFeedback.current
-              val context = LocalContext.current
+@Composable
+private fun ClassipodScreen(vm: ClassipodViewModel, onPeekNormal: () -> Unit) {
+    val player = vm.player
+    val state by vm.playerState.collectAsStateWithLifecycle()
+    val playlists by vm.playlists.collectAsStateWithLifecycle()
+    val downloads by vm.downloads.collectAsStateWithLifecycle()
+    val progress by player.progressState.collectAsStateWithLifecycle()
+    val haptics = LocalHapticFeedback.current
+    val context = LocalContext.current
 
-              val stack = remember { mutableStateListOf<Page>(Page.Root) }
-              val selections = remember { mutableStateMapOf<Page, Int>() }
-              val page: Page = stack.last()
+    val stack = remember { mutableStateListOf<Page>(Page.Root) }
+    val selections = remember { mutableStateMapOf<Page, Int>() }
+    val page: Page = stack.last()
 
-              fun push(p: Page) { stack.add(p) }
-              fun back() { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
+    fun push(p: Page) { stack.add(p) }
+    fun back() { if (stack.size > 1) stack.removeAt(stack.lastIndex) }
 
-              val likedTracks = remember(playlists) {
-                  val liked = playlists.firstOrNull { it.mode == LIKED_SONGS_MODE && it.title == LIKED_SONGS_TITLE }
-                      ?: playlists.firstOrNull { it.mode == LIKED_SONGS_MODE }
-                  liked?.tracks?.map { it.toPlayableTrack() }.orEmpty()
-              }
-              val playlistList = remember(playlists) { playlists.filter { it.mode != LIKED_SONGS_MODE } }
-              val downloadTracks = remember(downloads) { downloads.map { it.toPlayableTrack() } }
+    val likedTracks = remember(playlists) {
+        val liked = playlists.firstOrNull { it.mode == LIKED_SONGS_MODE && it.title == LIKED_SONGS_TITLE }
+            ?: playlists.firstOrNull { it.mode == LIKED_SONGS_MODE }
+        liked?.tracks?.map { it.toPlayableTrack() }.orEmpty()
+    }
+    val playlistList = remember(playlists) { playlists.filter { it.mode != LIKED_SONGS_MODE } }
+    val downloadTracks = remember(downloads) { downloads.map { it.toPlayableTrack() } }
 
-              val listTracks: List<PlayableTrack>? = when (page) {
-                  Page.Liked -> likedTracks
-                  Page.Downloads -> downloadTracks
-                  is Page.PlaylistTracks -> playlistList.firstOrNull { it.id == page.id }?.tracks?.map { it.toPlayableTrack() }.orEmpty()
-                  else -> null
-              }
-              val trackRows: List<IpodRow>? = remember(listTracks, page) {
-                  listTracks?.let { tracks ->
-                      val label = pageTitle(page)
-                      tracks.mapIndexed { i, t ->
-                          IpodRow(t.title, t.artist, chevron = false) {
-                              player.playQueue(tracks, i, label)
-                              push(Page.NowPlaying)
-                          }
-                      }
-                  }
-              }
+    val listTracks: List<PlayableTrack>? = when (page) {
+        Page.Liked -> likedTracks
+        Page.Downloads -> downloadTracks
+        is Page.PlaylistTracks -> playlistList.firstOrNull { it.id == page.id }?.tracks?.map { it.toPlayableTrack() }.orEmpty()
+        else -> null
+    }
+    val trackRows: List<IpodRow>? = remember(listTracks, page) {
+        listTracks?.let { tracks ->
+            val label = pageTitle(page)
+            tracks.mapIndexed { i, t ->
+                IpodRow(t.title, t.artist, chevron = false) {
+                    player.playQueue(tracks, i, label)
+                    push(Page.NowPlaying)
+                }
+            }
+        }
+    }
 
-              val rows: List<IpodRow> = when (page) {
-                  Page.Root -> buildList {
-                      if (state.current != null) add(IpodRow("Now Playing") { push(Page.NowPlaying) })
-                      add(IpodRow("Up Next", state.queue.size.takeIf { it > 0 }?.toString()) {
-                          selections[Page.UpNext] = state.currentIndex.coerceAtLeast(0)
-                          push(Page.UpNext)
-                      })
-                      add(IpodRow("Liked Songs") { push(Page.Liked) })
-                      add(IpodRow("Playlists") { push(Page.Playlists) })
-                      add(IpodRow("Downloads") { push(Page.Downloads) })
-                      add(IpodRow("Settings") { push(Page.Settings) })
-                  }
-                  Page.UpNext -> state.queue.mapIndexed { i, t ->
-                      IpodRow(t.title, t.artist, chevron = false) {
-                          player.seekToQueueItem(i)
-                          push(Page.NowPlaying)
-                      }
-                  }
-                  Page.Playlists -> playlistList.map { pl ->
-                      IpodRow(pl.title, pl.tracks.size.toString()) { push(Page.PlaylistTracks(pl.id, pl.title)) }
-                  }
-                  Page.Settings -> listOf(
-                      IpodRow("Shuffle", if (state.shuffleEnabled) "On" else "Off", chevron = false) { player.toggleShuffle() },
-                      IpodRow(
-                          "Repeat",
-                          when (state.repeatMode) {
-                              Player.REPEAT_MODE_ONE -> "One"
-                              Player.REPEAT_MODE_ALL -> "All"
-                              else -> "Off"
-                          },
-                          chevron = false,
-                      ) { player.cycleRepeatMode() },
-                      IpodRow("LastWave (normal app)") { onPeekNormal() },
-                      IpodRow("Turn off iPod mode", chevron = false) { vm.setIpodMode(false) },
-                  )
-                  Page.NowPlaying -> emptyList()
-                  else -> trackRows.orEmpty()
-              }
+    val rows: List<IpodRow> = when (page) {
+        Page.Root -> buildList {
+            if (state.current != null) add(IpodRow("Now Playing") { push(Page.NowPlaying) })
+            add(IpodRow("Up Next", state.queue.size.takeIf { it > 0 }?.toString()) {
+                selections[Page.UpNext] = state.currentIndex.coerceAtLeast(0)
+                push(Page.UpNext)
+            })
+            add(IpodRow("Liked Songs") { push(Page.Liked) })
+            add(IpodRow("Playlists") { push(Page.Playlists) })
+            add(IpodRow("Downloads") { push(Page.Downloads) })
+            add(IpodRow("Settings") { push(Page.Settings) })
+        }
+        Page.UpNext -> state.queue.mapIndexed { i, t ->
+            IpodRow(t.title, t.artist, chevron = false) {
+                player.seekToQueueItem(i)
+                push(Page.NowPlaying)
+            }
+        }
+        Page.Playlists -> playlistList.map { pl ->
+            IpodRow(pl.title, pl.tracks.size.toString()) { push(Page.PlaylistTracks(pl.id, pl.title)) }
+        }
+        Page.Settings -> listOf(
+            IpodRow("Shuffle", if (state.shuffleEnabled) "On" else "Off", chevron = false) { player.toggleShuffle() },
+            IpodRow(
+                "Repeat",
+                when (state.repeatMode) {
+                    Player.REPEAT_MODE_ONE -> "One"
+                    Player.REPEAT_MODE_ALL -> "All"
+                    else -> "Off"
+                },
+                chevron = false,
+            ) { player.cycleRepeatMode() },
+            IpodRow("LastWave (normal app)") { onPeekNormal() },
+            IpodRow("Turn off iPod mode", chevron = false) { vm.setIpodMode(false) },
+        )
+        Page.NowPlaying -> emptyList()
+        else -> trackRows.orEmpty()
+    }
 
-              val sel = (selections[page] ?: 0).coerceIn(0, (rows.size - 1).coerceAtLeast(0))
+    val sel = (selections[page] ?: 0).coerceIn(0, (rows.size - 1).coerceAtLeast(0))
 
-              // Scrubbing on the Now Playing page (finger around the wheel seeks).
-              var scrubMs by remember { mutableStateOf<Long?>(null) }
-              val track = state.current
-              val durMs = if (progress.durationMs > 0L) progress.durationMs else (track?.durationMs ?: state.durationMs)
-              val shownMs = scrubMs ?: progress.positionMs
+    // Scrubbing on the Now Playing page (finger around the wheel seeks).
+    var scrubMs by remember { mutableStateOf<Long?>(null) }
+    val track = state.current
+    val durMs = if (progress.durationMs > 0L) progress.durationMs else (track?.durationMs ?: state.durationMs)
+    val shownMs = scrubMs ?: progress.positionMs
 
-              BackHandler {
-                  if (stack.size > 1) back() else (context as? Activity)?.moveTaskToBack(true)
-              }
+    BackHandler {
+        if (stack.size > 1) back() else (context as? Activity)?.moveTaskToBack(true)
+    }
 
-              val bodyBrush = Brush.verticalGradient(listOf(BodyTop, BodyBottom))
-              BoxWithConstraints(
-                  Modifier
-                      .fillMaxSize()
-                      .background(bodyBrush)
-                      .pointerInput(Unit) { detectTapGestures { } }
-                      .statusBarsPadding()
-                      .navigationBarsPadding(),
-              ) {
-                  val wide = maxWidth > maxHeight
-                  val wheelSize = if (wide) {
-                      minOf(maxHeight - 24.dp, 320.dp)
-                  } else {
-                      minOf(maxWidth - 48.dp, minOf(340.dp, maxHeight * 0.42f))
-                  }
+    val bodyBrush = Brush.verticalGradient(listOf(BodyTop, BodyBottom))
+    BoxWithConstraints(
+        Modifier
+            .fillMaxSize()
+            .background(bodyBrush)
+            .pointerInput(Unit) { detectTapGestures { } }
+            .statusBarsPadding()
+            .navigationBarsPadding(),
+    ) {
+        val wide = maxWidth > maxHeight
+        val wheelSize = if (wide) {
+            minOf(maxHeight - 24.dp, 320.dp)
+        } else {
+            minOf(maxWidth - 48.dp, minOf(340.dp, maxHeight * 0.42f))
+        }
 
-                  val lcd: @Composable (Modifier) -> Unit = { mod ->
-                      Lcd(
-                          modifier = mod,
-                          title = pageTitle(page),
-                          canGoBack = stack.size > 1,
-                          isPlaying = state.isPlaying,
-                          onBack = { back() },
-                      ) {
-                          if (page == Page.NowPlaying) {
-                              if (track == null) {
-                                  Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                      Text("Nothing playing", color = SoftText, fontSize = 15.sp)
-                                  }
-                              } else {
-                                  NowPlayingView(
-                                      track = track,
-                                      index = state.currentIndex + 1,
-                                      total = state.queue.size,
-                                      shuffle = state.shuffleEnabled,
-                                      posMs = shownMs,
-                                      durMs = durMs,
-                                  )
-                              }
-                          } else if (rows.isEmpty()) {
-                              Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                  Text("No songs", color = SoftText, fontSize = 15.sp)
-                              }
-                          } else {
-                              key(page) {
-                                  val listState = rememberLazyListState(
-                                      initialFirstVisibleItemIndex = (sel - 3).coerceAtLeast(0),
-                                  )
-                                  LaunchedEffect(sel, rows.size) {
-                                      val visible = listState.layoutInfo.visibleItemsInfo
-                                      if (visible.isNotEmpty()) {
-                                          val first = visible.first().index
-                                          val last = visible.last().index
-                                          if (sel < first) {
-                                              listState.scrollToItem(sel)
-                                          } else if (sel >= last) {
-                                              listState.scrollToItem((sel - (last - first) + 1).coerceAtLeast(0))
-                                          }
-                                      }
-                                  }
-                                  LazyColumn(Modifier.fillMaxSize(), state = listState) {
-                                      items(rows.size) { i ->
-                                          val row = rows[i]
-                                          RowView(row, selected = i == sel) {
-                                              selections[page] = i
-                                              row.onSelect()
-                                          }
-                                      }
-                                  }
-                              }
-                          }
-                      }
-                  }
+        val lcd: @Composable (Modifier) -> Unit = { mod ->
+            Lcd(
+                modifier = mod,
+                title = pageTitle(page),
+                canGoBack = stack.size > 1,
+                isPlaying = state.isPlaying,
+                onBack = { back() },
+            ) {
+                if (page == Page.NowPlaying) {
+                    if (track == null) {
+                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Text("Nothing playing", color = SoftText, fontSize = 15.sp)
+                        }
+                    } else {
+                        NowPlayingView(
+                            track = track,
+                            index = state.currentIndex + 1,
+                            total = state.queue.size,
+                            shuffle = state.shuffleEnabled,
+                            posMs = shownMs,
+                            durMs = durMs,
+                        )
+                    }
+                } else if (rows.isEmpty()) {
+                    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        Text("No songs", color = SoftText, fontSize = 15.sp)
+                    }
+                } else {
+                    key(page) {
+                        val listState = rememberLazyListState(
+                            initialFirstVisibleItemIndex = (sel - 3).coerceAtLeast(0),
+                        )
+                        LaunchedEffect(sel, rows.size) {
+                            val visible = listState.layoutInfo.visibleItemsInfo
+                            if (visible.isNotEmpty()) {
+                                val first = visible.first().index
+                                val last = visible.last().index
+                                if (sel < first) {
+                                    listState.scrollToItem(sel)
+                                } else if (sel >= last) {
+                                    listState.scrollToItem((sel - (last - first) + 1).coerceAtLeast(0))
+                                }
+                            }
+                        }
+                        LazyColumn(Modifier.fillMaxSize(), state = listState) {
+                            items(rows.size) { i ->
+                                val row = rows[i]
+                                RowView(row, selected = i == sel) {
+                                    selections[page] = i
+                                    row.onSelect()
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-                  val wheel: @Composable () -> Unit = {
-                      ClickWheel(
-                          size = wheelSize,
-                          isPlaying = state.isPlaying,
-                          onMenu = { back() },
-                          onNext = { player.next() },
-                          onPrevious = { player.previous() },
-                          onPlayPause = { player.toggl
+        val wheel: @Composable () -> Unit = {
+            ClickWheel(
+                size = wheelSize,
+                isPlaying = state.isPlaying,
+                onMenu = { back() },
+                onNext = { player.next() },
+                onPrevious = { player.previous() },
+                onPlayPause = { player.togglePlayPause() },
+                onCenter = {
+                    if (page == Page.NowPlaying) player.togglePlayPause() else rows.getOrNull(sel)?.onSelect?.invoke()
+                },
+                onCenterHold = { player.toggleShuffle() },
+                onTick = { dir ->
+                    if (page != Page.NowPlaying && rows.isNotEmpty()) {
+                        val n = (sel + dir).coerceIn(0, rows.size - 1)
+                        if (n != sel) {
+                            selections[page] = n
+                            haptics.performHapticFeedback(HapticFeedbackType.TextHandleMove)
+                        }
+                    }
+                },
+                onDragStart = { if (page == Page.NowPlaying) scrubMs = progress.positionMs },
+                onDelta = { rad ->
+                    val cur = scrubMs
+                    if (page == Page.NowPlaying && cur != null) {
+                        val upper = if (durMs > 0L) durMs else Long.MAX_VALUE
+                        scrubMs = (cur + (rad / (2f * PI.toFloat()) * 60_000f).toLong()).coerceIn(0L, upper)
+                    }
+                },
+                onDragEnd = {
+                    scrubMs?.let { player.seekTo(it) }
+                    scrubMs = null
+                },
+            )
+        }
+
+        if (wide) {
+            Row(
+                Modifier.fillMaxSize().padding(16.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                lcd(Modifier.weight(1f).fillMaxHeight())
+                wheel()
+            }
+        } else {
+            Column(
+                Modifier.fillMaxSize().padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                lcd(Modifier.fillMaxWidth().weight(1f))
+                Spacer(Modifier.height(18.dp))
+                wheel()
+            }
+        }
+    }
+}
+
+@Composable
+private fun Lcd(
+    modifier: Modifier,
+    title: String,
+    canGoBack: Boolean,
+    isPlaying: Boolean,
+    onBack: () -> Unit,
+    content: @Composable () -> Unit,
+) {
+    Box(
+        modifier
+            .clip(RoundedCornerShape(14.dp))
+            .background(LcdBezel)
+            .padding(5.dp),
+    ) {
+        Column(
+            Modifier
+                .fillMaxSize()
+                .clip(RoundedCornerShape(9.dp))
+                .background(LcdBg),
+        ) {
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .height(34.dp)
+                    .background(Brush.verticalGradient(listOf(HeaderTop, HeaderBottom)))
+                    .padding(horizontal = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(Modifier.width(28.dp).clickable(enabled = canGoBack) { onBack() }) {
+                    if (canGoBack) Text("\u2039", color = Color.White, fontSize = 24.sp)
+                }
+                Text(
+                    title,
+                    modifier = Modifier.weight(1f),
+                    textAlign = TextAlign.Center,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Box(Modifier.width(28.dp), contentAlignment = Alignment.CenterEnd) {
+                    Icon(
+                        imageVector = if (isPlaying) Icons.Filled.PlayArrow else Icons.Filled.Pause,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(16.dp),
+                    )
+                }
+            }
+            Box(Modifier.fillMaxWidth().height(1.dp).background(Color.Black))
+            Box(Modifier.fillMaxSize()) { content() }
+        }
+    }
+}
+
+@Composable
+private fun RowView(row: IpodRow, selected:import sys, pathlib
+ROOT = pathlib.Path("app/src/main/java/com/lastwave/app")
+
+def edit(rel, old, new):
+    p = ROOT / rel
+    raw = p.read_bytes().decode("utf-8")
+    crlf = "\r\n" in raw
+    text = raw.replace("\r\n", "\n")
+    n = text.count(old)
+    if n != 1:
+        sys.exit(f"ERROR: expected exactly 1 match in {rel}, found {n} for:\n{old[:120]}")
+    text = text.replace(old, new)
+    if crlf:
+        text = text.replace("\n", "\r\n")
+    p.write_bytes(text.encode("utf-8"))
+    print("patched", rel)
+
+# ---- 1. iPod mode setting -------------------------------------------------
+edit("data/local/SettingsPreferences.kt",
+     "    val buttonNowPlayingEnabled: Boolean = false,\n",
+     "    val buttonNowPlayingEnabled: Boolean = false,\n    val ipodModeEnabled: Boolean = false,\n")
+edit("data/local/SettingsPreferences.kt",
+     '        val BUTTON_NOW_PLAYING_ENABLED = booleanPreferencesKey("lw_button_now_playing_enabled")\n',
+     '        val BUTTON_NOW_PLAYING_ENABLED = booleanPreferencesKey("lw_button_now_playing_enabled")\n'
+     '        val IPOD_MODE_ENABLED = booleanPreferencesKey("lw_ipod_mode_enabled")\n')
+edit("data/local/SettingsPreferences.kt",
+     "                buttonNowPlayingEnabled = p.readSafely(Keys.BUTTON_NOW_PLAYING_ENABLED) ?: false,\n",
+     "                buttonNowPlayingEnabled = p.readSafely(Keys.BUTTON_NOW_PLAYING_ENABLED) ?: false,\n"
+     "                ipodModeEnabled = p.readSafely(Keys.IPOD_MODE_ENABLED) ?: false,\n")
+edit("data/local/SettingsPreferences.kt",
+     "        dataStore.edit { it[Keys.BUTTON_NOW_PLAYING_ENABLED] = enabled }\n    }\n",
+     "        dataStore.edit { it[Keys.BUTTON_NOW_PLAYING_ENABLED] = enabled }\n    }\n\n"
+     "    suspend fun setIpodModeEnabled(enabled: Boolean) {\n"
+     "        dataStore.edit { it[Keys.IPOD_MODE_ENABLED] = enabled }\n    }\n")
+
+edit("ui/settings/SettingsViewModel.kt",
+     "        settingsPreferences.setButtonNowPlayingEnabled(enabled)\n    }\n",
+     "        settingsPreferences.setButtonNowPlayingEnabled(enabled)\n    }\n"
+     '    fun setIpodModeEnabled(enabled: Boolean) = launchSettingsAction("update iPod mode") {\n'
+     "        settingsPreferences.setIpodModeEnabled(enabled)\n    }\n")
+
+edit("ui/settings/SettingsScreen.kt",
+     "                    SettingsGroup(rowCount = 3) { index, position ->\n"
+     "                        when (index) {\n"
+     "                            0 -> SettingsActionCard(\n"
+     "                                icon = Icons.Filled.Translate,",
+     "                    SettingsGroup(rowCount = 4) { index, position ->\n"
+     "                        when (index) {\n"
+     "                            0 -> SettingsActionCard(\n"
+     "                                icon = Icons.Filled.Translate,")
+edit("ui/settings/SettingsScreen.kt",
+     '                                isHighlighted = (highlightedSettingId == "appearance.button_now_playing"),\n'
+     "                            )\n",
+     '                                isHighlighted = (highlightedSettingId == "appearance.button_now_playing"),\n'
+     "                            )\n"
+     "                            3 -> SettingsToggleCard(\n"
+     "                                icon = Icons.Filled.PlayCircle,\n"
+     "                                iconContainer = MaterialTheme.colorScheme.secondaryContainer,\n"
+     "                                iconTint = MaterialTheme.colorScheme.onSecondaryContainer,\n"
+     '                                title = "iPod mode",\n'
+     "                                subtitle = if (misc.ipodModeEnabled) {\n"
+     '                                    "Full iPod interface with click wheel"\n'
+     "                                } else {\n"
+     '                                    "Normal LastWave interface"\n'
+     "                                },\n"
+     "                                checked = misc.ipodModeEnabled,\n"
+     "                                onCheckedChange = viewModel::setIpodModeEnabled,\n"
+     "                                position = position,\n"
+     '                                isHighlighted = (highlightedSettingId == "appearance.ipod_mode"),\n'
+     "                            )\n")
+
+edit("MainActivity.kt",
+     "                        // Desktop-style in-app update dialog, shared by every screen.\n",
+     "                        com.lastwave.app.ui.classipod.ClassipodOverlay()\n"
+     "                        // Desktop-style in-app update dialog, shared by every screen.\n")
+
+# ---- 2. Hidden (app-private) downloads -------------------------------------
+edit("data/download/TrackDownloadManagerStorage.kt",
+     "        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {\n"
+     "            // Android MediaStore Audio only accepts standard audio MIME types\n",
+     "        if (keepDownloadsPrivate()) {\n"
+     "            val privateBase = privateDownloadsDir(context)\n"
+     "            val privateDir = if (safeSubpath.isNotBlank()) File(privateBase, safeSubpath) else privateBase\n"
+     "            if (!privateDir.exists()) privateDir.mkdirs()\n"
+     "            val privateFile = File(privateDir, filename)\n"
+     "            return Triple(java.io.FileOutputStream(privateFile), null, privateFile)\n"
+     "        }\n\n"
+     "        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {\n"
+     "            // Android MediaStore Audio only accepts standard audio MIME types\n")
+edit("data/download/TrackDownloadManagerStorage.kt",
+     "        // Mirror the audio subfolder so .lrc sits next to its track. Note the\n",
+     "        if (keepDownloadsPrivate()) {\n"
+     "            return runCatching {\n"
+     "                val privateBase = privateDownloadsDir(context)\n"
+     "                val privateDir = if (safeSubpath.isNotBlank()) File(privateBase, safeSubpath) else privateBase\n"
+     "                if (!privateDir.exists()) privateDir.mkdirs()\n"
+     "                val privateFile = File(privateDir, filename)\n"
+     "                privateFile.writeText(content, Charsets.UTF_8)\n"
+     "                privateFile.absolutePath\n"
+     "            }.getOrNull()\n"
+     "        }\n"
+     "        // Mirror the audio subfolder so .lrc sits next to its track. Note the\n")
+
+# helper functions appended to the end of the storage file
+p = ROOT / "data/download/TrackDownloadManagerStorage.kt"
+raw = p.read_bytes().decode("utf-8")
+crlf = "\r\n" in raw
+add = (
+    "\n\n/** Downloads stay in the app's private storage (like Spotify), not in the public Music folder. */\n"
+    "internal fun keepDownloadsPrivate(): Boolean = true\n\n"
+    "internal fun privateDownloadsDir(context: Context): File =\n"
+    '    File(context.filesDir, "downloads").apply { if (!exists()) mkdirs() }\n'
+)
+if crlf:
+    add = add.replace("\n", "\r\n")
+p.write_bytes((raw.rstrip() + add).encode("utf-8"))
+print("patched data/download/TrackDownloadManagerStorage.kt (helpers)")
+
+edit("playback/MusicPlayer.kt",
+     "listOfNotNull(appMusicDir?.takeIf { it.exists() })",
+     'listOfNotNull(appMusicDir?.takeIf { it.exists() }, java.io.File(appContext.filesDir, "downloads").takeIf { it.exists() })')
+
+# ---- 3. new Classipod interface ----------------------------------------------
+import shutil
+dst_dir = ROOT / "ui/classipod"
+dst_dir.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(sys.argv[1], dst_dir / "Classipod.kt")
+print("added ui/classipod/Classipod.kt")
+print("ALL EDITS APPLIED")
